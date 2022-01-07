@@ -1,12 +1,12 @@
-from Tkinter import *
+from tkinter import *
 import os
 from Anchors import Anchor
 import random
 from copy import deepcopy
-import tkFileDialog
+import tkinter.filedialog
 import itertools
 from multiprocessing import Pool
-import ttk
+import tkinter.ttk
 import shelve
 from collections import defaultdict
 import time
@@ -15,13 +15,13 @@ import xml.etree.ElementTree as ET
 from Logging import LogElement
 from collections import namedtuple
 from copy import *
-import cPickle as pickle
+import pickle as pickle
 import string
 import numpy as np
 from helpers import *
 from scipy.sparse import csr_matrix
 from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as metrics
 
 
@@ -32,14 +32,14 @@ def getPatient(v):
     return v, pat
 
 def randomString(length=16):
-    return "".join([random.choice(string.letters) for _ in xrange(length)])
+    return "".join([random.choice(string.ascii_letters) for _ in range(length)])
 
 def noPunctuation(w):
     return len(set("{}()") & set(w[0]))==0
 
 def readLabels(filename):
     labels = {}
-    f = file(filename)
+    f = open(filename)
     for l in f:
         id, label = l.split()
         labels[id] = int(label)
@@ -52,7 +52,7 @@ def readAnchors(filename, parent, max_anchors=-1):
 
     for concept in root.findall('.//concept'):
         name = concept.attrib['name']
-        print 'initializing concept', name
+        print('initializing concept', name)
 
         saveloc = concept.attrib['saveloc']+'/'+name+'.pk'
         label_saveloc = concept.attrib['saveloc']+'/'+name+'.labels.pk'
@@ -60,21 +60,21 @@ def readAnchors(filename, parent, max_anchors=-1):
         labels = None
 
         try:
-            anch = pickle.load(file(saveloc))
+            anch = pickle.load(open(saveloc))
         except:
             nodes = concept.text.strip().split('|')
             edges = []
             anch = [Anchor(n, [n], []) for n in nodes if len(n)]
 
         try:
-            labels = pickle.load(file(label_saveloc))
+            labels = pickle.load(open(label_saveloc))
         except:
             labels = {}
 
         try:
-            flags = pickle.load(file(flags_saveloc))
+            flags = pickle.load(open(flags_saveloc))
         except:
-            print 'could not load flags from ', flags_saveloc
+            print('could not load flags from ', flags_saveloc)
             flags = {}
 
         anchors[name] = Concept(name, anch, parent=parent, saveloc=saveloc, labels=labels, flags=flags)
@@ -98,14 +98,14 @@ def readAnchors(filename, parent, max_anchors=-1):
             continue
         name = loc.split('/')[-1].replace('.pk', '')
         if not name in anchors:
-            anch = pickle.load(file(parent.saveloc+'/'+loc))
+            anch = pickle.load(open(parent.saveloc+'/'+loc))
             try:
-                labels = pickle.load(file(parent.saveloc+'/'+loc.replace('.pk', '.labels.pk')))
+                labels = pickle.load(open(parent.saveloc+'/'+loc.replace('.pk', '.labels.pk')))
             except:
                 labels = {}
             anchors[name] = Concept(name, anch, parent=parent, saveloc=parent.saveloc+'/'+name+'.pk', labels=labels)
 
-    print 'anchors initialized', anchors
+    print('anchors initialized', anchors)
     return anchors
 
 def update_sparse_X(X):
@@ -134,7 +134,7 @@ class Concept:
         else:
             self.labels = labels
 
-        for pid,label in self.labels.items():
+        for pid,label in list(self.labels.items()):
             self.human_labels[pid] = label
 
         if flags == None:
@@ -169,7 +169,7 @@ class Concept:
         self.eval_saveloc = saveloc.replace('.pk', '.eval.pk')
         
         try:
-            self.evaluators = pickle.load(file(self.eval_saveloc))
+            self.evaluators = pickle.load(open(self.eval_saveloc))
         except:
             pass
         self.dumpAnchors()
@@ -179,7 +179,7 @@ class Concept:
         self.saveloc = self.saveloc.replace(self.name, new_name)
         self.label_saveloc = self.label_saveloc.replace(self.name, new_name)
         
-        for pid in union(self.anchoredPatients.values()):
+        for pid in union(list(self.anchoredPatients.values())):
             if pid in self.backend.patients:
                 self.backend.patients[pid]['anchors'].remove(self.name)
                 self.backend.patients[pid]['anchors'].add(new_name)
@@ -188,41 +188,41 @@ class Concept:
 
     def dumpAnchors(self):
         try:
-            pickle.dump(self.anchors, file(self.saveloc, 'w'))
+            pickle.dump(self.anchors, open(self.saveloc, 'w'))
         except:
-            print 'warning could not save to ', self.saveloc
+            print('warning could not save to ', self.saveloc)
 
     def dumpLabels(self):
         try:
-            pickle.dump(self.human_labels, file(self.label_saveloc, 'w'))
+            pickle.dump(self.human_labels, open(self.label_saveloc, 'w'))
         except:
-            print 'warning could not save to ', self.saveloc
+            print('warning could not save to ', self.saveloc)
 
     def dumpFlags(self):
         try:
-            print 'dumping flags', self.flagged_patients.items()
-            pickle.dump(self.flagged_patients, file(self.flags_saveloc, 'w'))
+            print('dumping flags', list(self.flagged_patients.items()))
+            pickle.dump(self.flagged_patients, open(self.flags_saveloc, 'w'))
         except:
-            print 'warning could not save to ', self.flags_saveloc
+            print('warning could not save to ', self.flags_saveloc)
 
     def dumpEvaluators(self):
         try:
-            print 'dumping evaluators', self.evaluators
-            pickle.dump(self.evaluators, file(self.eval_saveloc, 'w'))
+            print('dumping evaluators', self.evaluators)
+            pickle.dump(self.evaluators, open(self.eval_saveloc, 'w'))
         except:
-            print 'warning could not save to ', self.eval_saveloc
+            print('warning could not save to ', self.eval_saveloc)
 
     def dumpDecisionRule(self):
         loc = self.saveloc.replace('.pk', '.weights.pk')
         try:
-            pickle.dump(zip(self.vocab, self.estimator.coef_), file(loc, 'w'))
-        except Exception, e:
-            print 'could not dump rule to ', loc, "%s", e
+            pickle.dump(list(zip(self.vocab, self.estimator.coef_)), open(loc, 'w'))
+        except Exception as e:
+            print('could not dump rule to ', loc, "%s", e)
 
             pass
     def saveState(self):
-        print 'saving state'
-        f = file(self.saveloc, 'w')
+        print('saving state')
+        f = open(self.saveloc, 'w')
         state = [self.anchors, 
                       self.name, 
                       self.id, 
@@ -247,9 +247,9 @@ class Concept:
     def loadState(self, parent, wordshelf):
         try:
             assert 0
-            f = file(self.saveloc)
+            f = open(self.saveloc)
         except:
-            print 'could not load from pickle'
+            print('could not load from pickle')
             return False
         
         [self.anchors, 
@@ -279,7 +279,7 @@ class Concept:
         return True
         
     def initPatients(self, patients, wordShelf, vocab, inv_vocab, display_vocab):
-        print 'concept initialize patients'
+        print('concept initialize patients')
         self.vocab, self.inv_vocab, self.display_vocab = vocab, inv_vocab, display_vocab
         self.wordShelf = wordShelf
         for anchor in self.anchors:
@@ -288,9 +288,9 @@ class Concept:
                 if a in wordShelf:
                     self.anchoredPatients[a] = wordShelf[a]
                 else:
-                    print "warning: word", a, "not indexed!"
+                    print("warning: word", a, "not indexed!")
         
-        for pid in union(self.anchoredPatients.values()):
+        for pid in union(list(self.anchoredPatients.values())):
             if pid in patients:
                 patients[pid]['anchors'].add(self.name)
 
@@ -300,17 +300,17 @@ class Concept:
     
     def done_updating(self, result):
         self.sparse_X_csr = result
-        print "done updating"
+        print("done updating")
 
     def configureLearnButton(self, state):
         self.backend.parent.anchorDisplay.learnButton.configure({'state':state})
 
     def initRepresentation(self, patients, sparse_X):
-        print 'init representation'
-        print >> self.backend.parent.logfile, str(time.time())+' init representation', self.name
-        self.patient_index = dict(zip([pat['index'] for pat in patients], xrange(len(patients))))
+        print('init representation')
+        print(str(time.time())+' init representation', self.name, file=self.backend.parent.logfile)
+        self.patient_index = dict(list(zip([pat['index'] for pat in patients], list(range(len(patients))))))
         self.patient_list = patients
-        print len(patients)
+        print(len(patients))
         self.sparse_X = sparse_X.copy()
         self.sparse_X_csr = None
         self.sparse_X_csr_eval = None
@@ -333,8 +333,8 @@ class Concept:
 
         if new_anchor.id == '':
             return
-        print >> self.backend.parent.logfile, str(time.time())+' added anchor', new_anchor.id, self.name
-        print 'new anchor', new_anchor.id
+        print(str(time.time())+' added anchor', new_anchor.id, self.name, file=self.backend.parent.logfile)
+        print('new anchor', new_anchor.id)
         self.backend.parent.logfile.flush()
 
         self.backend.doIndexing(new_anchor)
@@ -347,16 +347,16 @@ class Concept:
             a = a.lstrip('!')
             if a in self.wordShelf:
                 newly_anchored_patients |= set(self.wordShelf[a])
-                print 'anchor component', a, len(set(self.wordShelf[a])), 'total', len(newly_anchored_patients)
+                print('anchor component', a, len(set(self.wordShelf[a])), 'total', len(newly_anchored_patients))
             else:
-                print "anchor", a, "not indexed!"
+                print("anchor", a, "not indexed!")
                 sys.exit()
 
 
         self.anchoredPatients[new_anchor.id] = newly_anchored_patients
         self.recentPatients = newly_anchored_patients
-        print new_anchor in self.vocab
-        print new_anchor in self.inv_vocab
+        print(new_anchor in self.vocab)
+        print(new_anchor in self.inv_vocab)
 
         for pid in self.recentPatients:
             try:
@@ -390,8 +390,8 @@ class Concept:
         
     def addEvaluator(self, new_anchor):
 
-        print >> self.backend.parent.logfile, str(time.time())+' added evaluator', new_anchor.id, self.name
-        print 'new evaluator', new_anchor.id
+        print(str(time.time())+' added evaluator', new_anchor.id, self.name, file=self.backend.parent.logfile)
+        print('new evaluator', new_anchor.id)
         self.backend.parent.logfile.flush()
 
         self.backend.doIndexing(new_anchor)
@@ -403,11 +403,11 @@ class Concept:
         for a in new_anchor.getMembers():
             if a in self.wordShelf:
                 newly_anchored_patients |= (set(self.wordShelf[a.lstrip('!')]) & self.backend.validate_patient_set)
-                print len(set(self.wordShelf[a])), 'intersect', len(self.backend.validate_patient_set), '=', len(newly_anchored_patients)
+                print(len(set(self.wordShelf[a])), 'intersect', len(self.backend.validate_patient_set), '=', len(newly_anchored_patients))
                 #print set(self.wordShelf[a])
                 #print self.backend.validate_patient_set
             else:
-                print "anchor", a, "not indexed!"
+                print("anchor", a, "not indexed!")
                 sys.exit()
 
         self.evaluatorPatients[new_anchor.id] = newly_anchored_patients
@@ -418,12 +418,12 @@ class Concept:
             pass
 
     def removeEvaluator(self, anchorid):
-        print >> self.backend.parent.logfile, str(time.time())+' removed evaluator', anchorid, self.name
+        print(str(time.time())+' removed evaluator', anchorid, self.name, file=self.backend.parent.logfile)
         self.backend.parent.logfile.flush()
         #find an anchor with the same name
-        print 'removing id', anchorid
+        print('removing id', anchorid)
         for anchor in  [a for a in self.evaluators if a.id == anchorid]:
-            print 'removing anchor', anchorid
+            print('removing anchor', anchorid)
             self.evaluators.remove(anchor)
             self.evaluatorPatients[anchorid] = set()
 
@@ -431,9 +431,9 @@ class Concept:
 
     def do_evaluation(self):
         patients = []
-        print 'there are', len(union(self.evaluatorPatients.values())), "evaluator patients"
-        for pid in union(self.evaluatorPatients.values()):
-            print pid, 'is a positive case'
+        print('there are', len(union(list(self.evaluatorPatients.values()))), "evaluator patients")
+        for pid in union(list(self.evaluatorPatients.values())):
+            print(pid, 'is a positive case')
             patients.append((self.ranking[pid], pid))
 
         patients.sort()
@@ -443,16 +443,16 @@ class Concept:
         random.shuffle(self.pos_patients)
         self.targets = [p[1] for p in self.pos_patients[:10]]
         
-        print "evaluated!"
+        print("evaluated!")
         #print 'precision:', self.prec
-        print 'recall:', self.recall
-        print 'threshold', self.threshold
+        print('recall:', self.recall)
+        print('threshold', self.threshold)
 
 
     def get_precision(self):
         total = 0
         pos = 0
-        print 'getting precision'
+        print('getting precision')
         for r,pid in self.pos_patients:
             if pid in self.human_labels:
                 if self.human_labels[pid] > 0:
@@ -465,7 +465,7 @@ class Concept:
             return '?'
 
         if all([pid in self.human_labels for pid in self.targets]):
-            print "complete evaluation!"
+            print("complete evaluation!")
             self.evaluations.append(pos/float(total))
         return str(pos) + '/' + str(total)
 
@@ -475,13 +475,13 @@ class Concept:
         return self.recall
 
     def removeAnchor(self, anchorid):
-        print >> self.backend.parent.logfile, str(time.time())+' removed anchor', anchorid, self.name
+        print(str(time.time())+' removed anchor', anchorid, self.name, file=self.backend.parent.logfile)
         self.backend.parent.logfile.flush()
         #find an anchor with the same name
-        print 'removing id', anchorid
-        print 'here are ids', [a.id for a in self.anchors]
+        print('removing id', anchorid)
+        print('here are ids', [a.id for a in self.anchors])
         for anchor in  [a for a in self.anchors if a.id == anchorid]:
-            print 'removing anchor', anchorid
+            print('removing anchor', anchorid)
             self.anchors.remove(anchor)
             anchored_patients = self.anchoredPatients[anchor.id]
             for pid in anchored_patients:
@@ -514,10 +514,10 @@ class Concept:
 
 
     def doLearning(self):      
-        C = [10**(k) for k in xrange(-4,4)]
+        C = [10**(k) for k in range(-4,4)]
         params = [{'C':C, 'penalty':['l1'],}]
-        print "learning!"
-        print >> self.backend.parent.logfile, str(time.time())+' learning' , self.name
+        print("learning!")
+        print(str(time.time())+' learning' , self.name, file=self.backend.parent.logfile)
         self.backend.parent.logfile.flush()
         s = time.time()
 
@@ -530,52 +530,52 @@ class Concept:
         X = self.sparse_X_csr
         while X == None:
             time.sleep(1)
-            print 'waiting for sparse csr'
+            print('waiting for sparse csr')
             X = self.sparse_X_csr
 
-        print 'transform', time.time() -s
-        print 'pos examples', sum(self.Y)
-        print 'pos features', X.sum()
+        print('transform', time.time() -s)
+        print('pos examples', sum(self.Y))
+        print('pos features', X.sum())
         try:
             Learner.fit(X, self.Y)
-            print 'best params', Learner.best_params_
-            print 'grid scores', Learner.grid_scores_
+            print('best params', Learner.best_params_)
+            print('grid scores', Learner.grid_scores_)
             Learner = Learner.best_estimator_
             
         except:
-            print "could not learn!"
+            print("could not learn!")
         
         self.estimator = Learner
         self.dumpDecisionRule()
-        print 'fit', time.time() -s
+        print('fit', time.time() -s)
         self.predictions = self.sparse_X_csr * Learner.coef_.T + Learner.intercept_
-        print 'predict', time.time() -s
+        print('predict', time.time() -s)
         self.predictions = np.exp(self.predictions) / (1+np.exp(self.predictions))
-        print 'scale', time.time() -s
+        print('scale', time.time() -s)
         
 
         self.eval_predictions = self.sparse_X_csr_eval * Learner.coef_.T + Learner.intercept_
         self.eval_predictions = np.exp(self.eval_predictions) / (1+np.exp(self.eval_predictions))
 
 
-        self.ranking = zip([pat['index'] for pat in self.patient_list], np.ravel(self.predictions).tolist())
-        self.ranking += zip(self.backend.validate_patient_ids, np.ravel(self.eval_predictions).tolist())
+        self.ranking = list(zip([pat['index'] for pat in self.patient_list], np.ravel(self.predictions).tolist()))
+        self.ranking += list(zip(self.backend.validate_patient_ids, np.ravel(self.eval_predictions).tolist()))
         self.ranking = dict(self.ranking)
 
 
-        print 'rank', time.time() -s
-        print "done"
+        print('rank', time.time() -s)
+        print("done")
 
         try:
             self.do_evaluation()
-            print 'evaluating new model'
+            print('evaluating new model')
         except:
             pass
 
     def getSuggestions(self):
         suggestions = []
         try:
-            return filter(noPunctuation, sorted(zip(self.vocab, self.estimator.coef_[0]), key=lambda e: e[1], reverse=True))
+            return list(filter(noPunctuation, sorted(zip(self.vocab, self.estimator.coef_[0]), key=lambda e: e[1], reverse=True)))
 
         except:
             return []
@@ -589,7 +589,7 @@ class Concept:
         else:
             self.human_labels[patid] = tagval
         
-        print >> self.backend.parent.logfile, str(time.time())+' tagged patient', self.name, patid, tagval
+        print(str(time.time())+' tagged patient', self.name, patid, tagval, file=self.backend.parent.logfile)
         self.backend.parent.logfile.flush()
         self.dumpLabels()
 
@@ -609,61 +609,61 @@ class Backend:
         self.sparse_X = None
         self.saveloc = self.settings.find('anchors').attrib['loc']
 
-        print "loading vocab"
-        self.vocab,  self.inv_vocab, self.display_vocab = pickle.load(file(self.settings.find('./vocab').attrib['src']))
-        print "done"
+        print("loading vocab")
+        self.vocab,  self.inv_vocab, self.display_vocab = pickle.load(open(self.settings.find('./vocab').attrib['src'],'rb'))
+        print("done")
         if not loadfile:
-            print 'init patients'
+            print('init patients')
             self.initPatients()
-            print 'init anchors'
+            print('init anchors')
             self.initAnchors()
-            print 'done'
+            print('done')
         else:
-            print "loading file", loadfile
+            print("loading file", loadfile)
             self.doLoad(loadfile)
 
     def doIndexing(self, anchor):
         for a in anchor.getMembers():
             a = a.lstrip('!')
             if not a in self.wordShelf:
-                print 'indexing', a
+                print('indexing', a)
 
                 split_a = a.split()
                 split_a_set = set(split_a)
                 indexed = set()
 
                 if len(split_a) > 1: #only index compound words
-                    print a, 'is a compound word'
+                    print(a, 'is a compound word')
                     for p in self.patientList + self.validate_patient_list:
                         if split_a_set.issubset(set(p['Text'].split())):
-                            print "it is!"
-                            for f in p.keys():
+                            print("it is!")
+                            for f in list(p.keys()):
 
                                 if not 'parsed' in f:
                                     continue
 
-                                for i in xrange(len(p[f])-len(split_a)):
+                                for i in range(len(p[f])-len(split_a)):
                                     match = True
-                                    for j in xrange(len(split_a)):
-                                        print 'compare', split_a[j], p[f][i+j]['repr']
+                                    for j in range(len(split_a)):
+                                        print('compare', split_a[j], p[f][i+j]['repr'])
                                         if not split_a[j] in p[f][i+j]['repr']:
                                             match = False
                                             break
                                     if match:
-                                        print 'match!', p['index']
+                                        print('match!', p['index'])
                                         indexed.add(p['index']) 
 
-                                        for j in xrange(len(split_a)):
+                                        for j in range(len(split_a)):
                                             p[f][i+j]['repr'].append(a)
 
                                         self.visitShelf[p['index']] = p
-                                        print 'indexed!', p['index']
+                                        print('indexed!', p['index'])
 
                 self.wordShelf[a] = indexed
 
         self.visitShelf.sync()
         self.wordShelf.sync()
-        print 'done'
+        print('done')
 
     def getActiveConcept(self):
             return self.concepts[self.parent.currentConcept]
@@ -671,24 +671,24 @@ class Backend:
 
     def initPatients(self, patientSet="train"):
         
-        visitIDs = file(self.settings.find('./patients').attrib['src'])
+        visitIDs = open(self.settings.find('./patients').attrib['src'])
         self.visitShelf = shelve.open(self.settings.find('./patients').attrib['shelf'])
         self.wordShelf = shelve.open(self.settings.find('./vocab').attrib['shelf'])
         
-        start = int(filter(lambda s: s.attrib['name'] == "train", self.settings.findall('./patientSets/set'))[0].attrib['start'])
-        end = int(filter(lambda s: s.attrib['name'] == "train", self.settings.findall('./patientSets/set'))[0].attrib['end'])
+        start = int([s for s in self.settings.findall('./patientSets/set') if s.attrib['name'] == "train"][0].attrib['start'])
+        end = int([s for s in self.settings.findall('./patientSets/set') if s.attrib['name'] == "train"][0].attrib['end'])
 
         visit_ids = [z.strip() for z in visitIDs.readlines()[start:end]]
 
         self.visitIDs = visit_ids
-        print "reading in patients", len(visit_ids)
+        print("reading in patients", len(visit_ids))
 
-        print 'from shelve'
+        print('from shelve')
         sparse_X = []
         s = time.time()
         for i,v in enumerate(self.visitIDs):
             if i%1000 == 0:
-                print i, time.time() - s
+                print(i, time.time() - s)
                 if i > end:
                     break
             pat = self.visitShelf[v]
@@ -703,23 +703,23 @@ class Backend:
 
 
         self.patientList = [self.patients[v] for v in self.visitIDs]
-        self.patientIndex = dict(zip([pat['index'] for pat in self.patientList], xrange(len(self.patientList))))
+        self.patientIndex = dict(list(zip([pat['index'] for pat in self.patientList], list(range(len(self.patientList))))))
 
         visitIDs.seek(0)
-        start = int(filter(lambda s: s.attrib['name'] == "validate", self.settings.findall('./patientSets/set'))[0].attrib['start'])
-        end = int(filter(lambda s: s.attrib['name'] == "validate", self.settings.findall('./patientSets/set'))[0].attrib['end'])
+        start = int([s for s in self.settings.findall('./patientSets/set') if s.attrib['name'] == "validate"][0].attrib['start'])
+        end = int([s for s in self.settings.findall('./patientSets/set') if s.attrib['name'] == "validate"][0].attrib['end'])
         visit_ids = [z.strip() for z in visitIDs.readlines()[start:end]]
         self.validate_patient_set = set(visit_ids)
         self.validate_patient_ids = visit_ids
         self.validate_patient_list = []
-        print "reading in validate patients", len(visit_ids)
+        print("reading in validate patients", len(visit_ids))
 
-        print 'from shelve'
+        print('from shelve')
         sparse_X_validate = []
         s = time.time()
         for i,v in enumerate(visit_ids):
             if i%1000 == 0:
-                print i, time.time() - s
+                print(i, time.time() - s)
                 if i > end:
                     break
             pat = self.visitShelf[v]
@@ -734,7 +734,7 @@ class Backend:
         conceptList = self.parent.conceptListbox
         anchorfilename = self.settings.find('./anchors').attrib['src']
         self.concepts = readAnchors(anchorfilename, self, 0)
-        for concept in sorted(self.concepts.values(), key=lambda c: c.name):
+        for concept in sorted(list(self.concepts.values()), key=lambda c: c.name):
             conceptList.insertConcept(concept.name, concept.id)
 
 
@@ -754,10 +754,10 @@ class Backend:
             try:
                 concept.doLearning()
             except:
-                print "could not learn concept"
+                print("could not learn concept")
             #concept.saveState()
         else:
-            print 'loaded from pickle'
+            print('loaded from pickle')
         concept.initialized=True
         self.parent.conceptListbox.activateConcept(concept.name)
         return True
@@ -770,28 +770,28 @@ class Backend:
     def delete_concept(self, name):
         try:
             del self.concepts[name]
-            print >> self.parent.logfile, str(time.time())+' deleted concept', name
+            print(str(time.time())+' deleted concept', name, file=self.parent.logfile)
         except:
-            print 'could not delete concept', name
+            print('could not delete concept', name)
 
         try:
             os.remove(self.saveloc +'/'+name+'.pk')
             os.remove(self.saveloc +'/'+name+'.labels.pk')
         except:
-            print 'could not delete files for concept', name
+            print('could not delete files for concept', name)
 
     def rename_concept(self, oldname, newname):
-        print 'renaming', oldname, 'as', newname
+        print('renaming', oldname, 'as', newname)
         self.concepts[newname] = self.concepts[oldname]
         self.concepts[oldname] = None
         self.concepts[newname].set_name(newname)
-        print >> self.parent.logfile, str(time.time())+' renamed concept', oldname, newname
+        print(str(time.time())+' renamed concept', oldname, newname, file=self.parent.logfile)
         
         try:
             os.rename(self.saveloc +'/'+oldname+'.pk', self.saveloc+'/'+newname+'.pk')
             os.rename(self.saveloc +'/'+oldname+'.labels.pk', self.saveloc+'/'+newname+'.labels.pk')
         except:
-            print 'could not move files for concept', oldname, 'to', newname
+            print('could not move files for concept', oldname, 'to', newname)
 
 
         

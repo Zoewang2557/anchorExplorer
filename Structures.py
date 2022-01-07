@@ -1,6 +1,6 @@
 import sys
 import networkx as nx
-import cPickle as pickle
+import pickle as pickle
 import re
 
 class Structure(object):

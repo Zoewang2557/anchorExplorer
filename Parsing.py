@@ -8,7 +8,7 @@ import pickle
 
 printable = set(string.printable)
 def sanitize(txt):
-    return filter(lambda c: c in printable, txt)
+    return [c for c in txt if c in printable]
 
 try:
     stopwords=pickle.load(open('Stopwords.pk','rb'))
@@ -36,7 +36,7 @@ def process(line):
     return res
 
 
-table = string.maketrans("","")
+table = str.maketrans("","")
 ##Remove puntuation, transforms numbers (if not removed in process)
 def processbis(line):
     res=line
@@ -84,7 +84,7 @@ def annotate(x):
         if wrd in shortnegwords: #short negwords only last for one word
             flag = 2
             a = i
-    return res,string.join(y)
+    return res,str().join(y)#change to str
 
 
 try:
@@ -94,20 +94,20 @@ except:
 
 try:
     bigramlist=pickle.load(open('Bigrams.pk','rb'))
-    bigramlist = filter(lambda b: not any([k+' ' in b or ' '+k in b for k in keywords]), bigramlist)
+    bigramlist = [b for b in bigramlist if not any([k+' ' in b or ' '+k in b for k in keywords])]
 except:
     bigramlist = []
 
 def bigrammed(sen):
     sent=' '+sen.lower()+' '
     senlist=sen.split()
-    stop=set(filter(lambda x:x in sent,stopwords))
+    stop=set([x for x in stopwords if x in sent])
     for w in stop:
         sent=re.sub(' '+w+' ',' ',sent)
     sent=re.sub(' +',' ',sent).strip()
     i=0
     res=''
-    big=set(filter(lambda x:x in sent,bigramlist))
+    big=set([x for x in bigramlist if x in sent])
     while i<len(senlist):
         if i<len(senlist)-1 and senlist[i]+' '+senlist[i+1] in big:
             res+= 'bigram_'+senlist[i]+'_'+senlist[i+1]+' '
@@ -124,11 +124,11 @@ def parse_text(orig_txt, prefix):
     try:
         orig_txt = re.sub('PHI_PHI_PHI.*?PHI_PHI_PHI', '',orig_txt)
     except:
-        print 'cannot parse orig text', orig_txt
+        print('cannot parse orig text', orig_txt)
         sys.exit()
 
     orig_txt = sanitize(orig_txt)
-    orig_txt = re.sub('(['+re.escape(string.punctuation)+'])', ' \g<1> ', orig_txt)
+    orig_txt = re.sub('(['+re.escape(string.punctuation)+'])', ' \g<1> ', str(orig_txt))#add str()
     txt = orig_txt.lower()
     txt = process(txt)
     txt = bigrammed(txt)

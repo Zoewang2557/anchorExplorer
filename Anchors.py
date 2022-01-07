@@ -1,15 +1,15 @@
 import networkx as nx
 import re
 import itertools
-import cPickle as pickle
+import pickle as pickle
 from Structures import Structure
 
 #TODO: use settings to direct this reference
-vocab,inv_vocab,display_vocab = pickle.load(file('vocab.pk'))
+vocab,inv_vocab,display_vocab = pickle.load(open('vocab.pk','rb'))
 
 def subsets(l):
     sets = []
-    for k in xrange(1,len(l)+1):
+    for k in range(1,len(l)+1):
         for s in itertools.combinations(l, k):
             sets.append(s)
     return sets
@@ -29,7 +29,7 @@ class Anchor(object):
         if re.search('age_\d+-\d+', id):
             start = int(id.split('_')[1].split('-')[0])
             end = int(id.split('-')[1])
-            members = [id] + ['age_'+str(i) for i in xrange(start, end)]
+            members = [id] + ['age_'+str(i) for i in range(start, end)]
             edges = [(id, m) for m in members[1:]]
 
         if members == None:
@@ -49,8 +49,8 @@ class Anchor(object):
         for e in edges:
             self.structure.add_edge(*e)
 
-        print 'new anchor', id, members, edges
-        print 'members are', self.getMembers()
+        print('new anchor', id, members, edges)
+        print('members are', self.getMembers())
 
         e = set()
         for n in self.structure.nodes():
@@ -60,7 +60,7 @@ class Anchor(object):
                     e.add(v)
 
         self.exclusions = e
-        print 'exclusions', self.exclusions
+        print('exclusions', self.exclusions)
 
     def getMembers(self):
         return self.structure.nodes()

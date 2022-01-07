@@ -6,7 +6,7 @@ import random
 import shelve
 import numpy as np 
 import scipy.sparse as sparse
-import cPickle as pickle
+import pickle as pickle
 from collections import defaultdict, namedtuple
 import xml.etree.ElementTree as ET
 from Parsing import *
@@ -41,10 +41,10 @@ def process(orig_txt, prefix, datatype, display):
 
     
 def randomString(length=16):
-    return "".join([random.choice(string.letters) for _ in xrange(length)])
+    return "".join([random.choice(string.ascii_letters) for _ in range(length)])
 
 def randomText(length=30):
-    return " ".join([random.choice(words) for _ in xrange(length)])
+    return " ".join([random.choice(words) for _ in range(length)])
 
 vocab = defaultdict(int)
 
@@ -58,7 +58,7 @@ def xmlReadVisit(f):
         return None
 
     if not 'visit' in l:
-        print 'error parsing', l
+        print('error parsing', l)
         assert 0
     data.append(l)
     while not '</visit>' in l:
@@ -72,12 +72,12 @@ class real_patient_generator:
         self.input = src
         self.max_patients = max_patients
         self.n = 0
-        self.f = file(self.input)
+        self.f = open(self.input)
     
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.n < self.max_patients:
             pat = xmlReadVisit(self.f)
             if pat == None:
@@ -94,7 +94,8 @@ def remove_prefix(w):
     else:
         return w
 
-def token((disp, repr)):
+def token(xxx_todo_changeme):
+    (disp, repr) = xxx_todo_changeme
     return {'disp':disp, 'repr':repr}
 
 def realPatient(pat):
@@ -106,7 +107,7 @@ def realPatient(pat):
 
             try:
                 content = ET.fromstring(pat[field.attrib['name']])
-            except Exception, e:
+            except Exception as e:
                 #print e
                 tag = field.attrib['name']
                 pat[tag] = "<"+tag+">?</"+tag+">"
@@ -136,14 +137,14 @@ if __name__ == "__main__":
 
     if sys.argv[1] == 'test':
         txt = ' '.join(sys.argv[2:])
-        print process(txt, "", "text", None)
+        print(process(txt, "", "text", None))
 
     try:
         max_patients = int(sys.argv[1])
         xml_src = sys.argv[2] 
         settings = sys.argv[3]
     except:
-        print "usage: real_patients.py numPatients srcFile settings"
+        print("usage: real_patients.py numPatients srcFile settings")
         sys.exit()
 
     if 'fix_vocab' in sys.argv:
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     dictionaries = {}
     for datum in ET.parse(settings).findall('dataTypes/datum'):
         if 'dictionary' in datum.attrib:
-            dictionaries[datum.attrib['prefix']] = pickle.load(file(datum.attrib['dictionary']))
+            dictionaries[datum.attrib['prefix']] = pickle.load(open(datum.attrib['dictionary']))
 
     anchorwords = []
     for elem in ET.parse(settings).findall('anchors'):
@@ -163,7 +164,7 @@ if __name__ == "__main__":
             anchorwords += concept.text.split('|')
     anchorwords = [z.strip() for z in set(anchorwords)]
 
-    bigramlist += filter(lambda w: len(w.split()) > 1, anchorwords)
+    bigramlist += [w for w in anchorwords if len(w.split()) > 1]
 
     sys.stdout.flush()
 
@@ -174,7 +175,7 @@ if __name__ == "__main__":
 
     visitShelf = shelve.open('visitShelf', 'n')
     wordShelf = shelve.open('wordShelf', 'n')
-    visitIDs = file('visitIDs', 'w')
+    visitIDs = open('visitIDs', 'w')
     word_index = defaultdict(list)
     patients = []
     pool = Pool(4)
@@ -191,21 +192,21 @@ if __name__ == "__main__":
         for w in set(pat['Text'].split('|')):
             word_index[w].append(index)
 
-        print >>visitIDs,  index
+        print(index, file=visitIDs)
         patients.append(index)
         if len(patients) % 100 == 0:
-            print len(patients)
+            print(len(patients))
             sys.stdout.flush()
     visitIDs.close()
 
-    print 'done with round 1'
+    print('done with round 1')
     sys.stdout.flush()
     
     if not fix_vocab:
         vocab = [w for w in vocab if vocab[w] > 40]
-        inv_vocab = dict(zip(vocab, xrange(len(vocab))))
+        inv_vocab = dict(list(zip(vocab, list(range(len(vocab))))))
     else:
-        vocab,inv_vocab,_, = pickle.load(file('vocab.pk'))
+        vocab,inv_vocab,_, = pickle.load(open('vocab.pk'))
 
     #for pat in pool.imap_unordered(realPatient, real_patient_generator(src=xml_src, max_patients=max_patients), chunksize=100):
     for n, pat in enumerate(real_patient_generator(src=xml_src, max_patients=max_patients)):
@@ -218,25 +219,25 @@ if __name__ == "__main__":
         pat['sparse_X'] = m
         index = pat['index']
         if n % 100 == 0:
-            print n
+            print(n)
             sys.stdout.flush()
 
         visitShelf[index] = pat
     
-    print 'done with round 2'
+    print('done with round 2')
     sys.stdout.flush()
 
     visitShelf.close()
     visitIDs.close()
-    for w,s in word_index.items():
+    for w,s in list(word_index.items()):
         try:
             wordShelf[w]=s
         except:
-            print 'error', w
+            print('error', w)
 
     wordShelf.close()
     vocab = list(vocab)
-    inv_vocab = dict(zip(vocab, xrange(len(vocab))))
+    inv_vocab = dict(list(zip(vocab, list(range(len(vocab))))))
     display_vocab = [remove_prefix(w)+' ' for w in vocab]
-    pickle.dump((vocab, inv_vocab, display_vocab), file('vocab.pk', 'w'))
+    pickle.dump((vocab, inv_vocab, display_vocab), open('vocab.pk', 'wb+'))
 

@@ -1,6 +1,6 @@
-from Tkinter import *
-import cPickle as pickle
-from ttk import *
+from tkinter import *
+import pickle as pickle
+from tkinter.ttk import *
 from helpers import *
 from Anchors import Anchor
 from Structures import Structure 
@@ -43,7 +43,7 @@ class ConceptListbox:
     def onConceptSelect(self, event):
         for p in event.widget.selection():
             conceptID = event.widget.item(p)['text']
-            print "selecting", conceptID
+            print("selecting", conceptID)
             self.root.displayConcept(conceptID)
 
     def insertConcept(self, name,iden):
@@ -56,14 +56,14 @@ class ConceptListbox:
     def deleteConcept(self, event):
         for p in event.widget.selection():
             conceptID = event.widget.item(p)['text']
-            print "deleting", conceptID
+            print("deleting", conceptID)
             self.root.backend.delete_concept(conceptID)
             self.treeview.delete(p)
     
     def initiateRenameConcept(self, event):
         for p in event.widget.selection():
             conceptID = event.widget.item(p)['text']
-            print "renaming", conceptID
+            print("renaming", conceptID)
             self.renameConceptWindow(conceptID)
 
 
@@ -112,7 +112,7 @@ class StructuredAnchorDisplay:
     def selectAnchor(self, event):
         for p in event.widget.selection():
             anchor_name = event.widget.item(p)['values'][0]
-            print 'new structured anchor', anchor_name
+            print('new structured anchor', anchor_name)
             nodes,names,edges = self.structure.getDescendents(anchor_name)
             new_anchor = Anchor(str(anchor_name), nodes, edges,names)
 
@@ -122,7 +122,7 @@ class StructuredAnchorDisplay:
     def selectEvaluator(self, event):
         for p in event.widget.selection():
             anchor_name = event.widget.item(p)['values'][0]
-            print 'new structured evaluator', anchor_name
+            print('new structured evaluator', anchor_name)
             nodes,names,edges = self.structure.getDescendents(anchor_name)
             new_anchor = Anchor(str(anchor_name), nodes, edges,names)
 
@@ -238,7 +238,7 @@ class AnchorDisplay:
         
         for anch in concept.anchors:
             for a,name,p in anch.getStructure():
-                print 'adding anchor', a,name,p
+                print('adding anchor', a,name,p)
                 tags = []
                 if name[0] == '!':
                     tags.append('red')
@@ -396,8 +396,8 @@ class PatientDetailDisplay:
             self.patientDetails.insert(END, field+': ')
             try:
                 txt = pat[field+'_parsed']
-            except Exception, e:
-                print 'error?', e
+            except Exception as e:
+                print('error?', e)
                 continue 
             for w in txt:
                 tags = []
@@ -474,7 +474,7 @@ class PatientListDisplay:
             
     def addPatientToDisplay(self, pat, showPrediction=True):
         if pat==None:
-            print 'adding empty patients'
+            print('adding empty patients')
             self.patientList.insert("", END, text="", values=(""))
             return
 
@@ -506,7 +506,7 @@ class PatientListDisplay:
             listbox.delete(c)
 
         
-        print "displaying patients"
+        print("displaying patients")
         ranking = self.root.backend.getActiveConcept().ranking
         train_patients = set(self.root.backend.train_patient_ids)
         validate_patients = self.root.backend.validate_patient_set
@@ -523,9 +523,9 @@ class PatientListDisplay:
             
         else:
             anchors = self.root.backend.getActiveConcept().anchors
-            print 'anchors'
+            print('anchors')
             for a in anchors:
-                print a, a.id
+                print(a, a.id)
             anchored_patients = union(self.root.backend.getActiveConcept().anchoredPatients[a.id] for a in anchors) & validate_patients - union(self.root.backend.getActiveConcept().anchoredPatients[a.id] for a in anchors if a.id[0] == '!')
             if displayMode == 'filter':
                 target_patients = anchored_patients
@@ -534,7 +534,7 @@ class PatientListDisplay:
             elif displayMode == 'label':
                 target_patients = self.root.backend.getActiveConcept().targets
             else:
-                print "unknown display mode"
+                print("unknown display mode")
 
         patients = self.root.backend.patients
         try:
@@ -550,7 +550,7 @@ class PatientListDisplay:
             self.addPatientToDisplay(pat)
         
         if len(patient_order) == 0:
-            for _ in xrange(10):
+            for _ in range(10):
                 self.addPatientToDisplay(None)
         
 
@@ -580,11 +580,11 @@ class PatientListDisplay:
         else:
             anchors = set(self.anchors[conceptID])
 
-        ids = self.test_patients.keys()
+        ids = list(self.test_patients.keys())
         denom = 0.0
         inv_denom = 0.0
         if (not self.currentConcept in self.weights) or self.weights[self.currentConcept] == None:
-            print "cannot evaluate. The predictor is out of date"
+            print("cannot evaluate. The predictor is out of date")
             return 
 
         for patid in ids:
@@ -610,8 +610,8 @@ class PatientListDisplay:
 
             pat['weighting'][self.currentConcept] = odds[-1]
 
-        for i in xrange(50):
-            r = np.random.choice(xrange(len(odds)), p=odds)
+        for i in range(50):
+            r = np.random.choice(range(len(odds)), p=odds)
             patid = ids[r]
             pat = self.test_patients[patid]
 
