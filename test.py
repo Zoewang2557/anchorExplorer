@@ -5,11 +5,11 @@ from copy import deepcopy
 import itertools
 from multiprocessing import Pool
 import string
-import ttk
+import tkinter.ttk
 import shelve
 import time
 import sys
-import cPickle as pickle
+import pickle as pickle
 from collections import defaultdict
 import numpy as np
 import re
@@ -117,8 +117,8 @@ class Display:
     def showStats(self):
         displayString = ""
         displayString += "current var is "+ self.currentConcept+'\n'
-        displayString += 'anchored patients: ' +str(len(union(self.backend.concepts[self.currentConcept].anchoredPatients.values()))) +'\n'
-        displayString += 'hand labeled patients: ' + str(len(self.backend.concepts[self.currentConcept].human_labels.keys())) +'\n'
+        displayString += 'anchored patients: ' +str(len(union(list(self.backend.concepts[self.currentConcept].anchoredPatients.values())))) +'\n'
+        displayString += 'hand labeled patients: ' + str(len(list(self.backend.concepts[self.currentConcept].human_labels.keys()))) +'\n'
         #displayString += 'evaluator patients: ' + str(len(union(self.backend.concepts[self.currentConcept].evaluatorPatients.values()))) +'\n'
         #displayString += 'precision@'+str(self.backend.concepts[self.currentConcept].recall)+': ' + str(self.backend.concepts[self.currentConcept].get_precision()) + '\n'
         
@@ -127,11 +127,11 @@ class Display:
         
     def debug(self):
         #IPython.getipython.get_ipython().launch_new_instance({'self':self})
-        print "done with debugging session"
+        print("done with debugging session")
 
     def calculateStats(self):
         nAnchored = 0
-        for pat in self.patients.values():
+        for pat in list(self.patients.values()):
             if self.currentConcept in pat['anchors']:
                 self.anchored_patients[self.currentConcept].add(pat['index'])
                 nAnchored += 1
@@ -148,8 +148,8 @@ class Display:
         display_str += "model is "+status+'\n'
         #display_str += "validate set size "+str(self.validate_size)+'\n'
         display_str += "anchored patients="+str(nAnchored)+'\n'
-        display_str += "human labels (pos/neg)= ("+str(len([i for i in self.human_labels[self.currentConcept].values() if i == 1])) + '/'
-        display_str += str(len([i for i in self.human_labels[self.currentConcept].values() if i == 0])) + ')\n'
+        display_str += "human labels (pos/neg)= ("+str(len([i for i in list(self.human_labels[self.currentConcept].values()) if i == 1])) + '/'
+        display_str += str(len([i for i in list(self.human_labels[self.currentConcept].values()) if i == 0])) + ')\n'
         display_str += "display size is="+str(self.nDisplay)+'\n'
         display_str += "train size is="+str(self.nTrain)+'\n'
         self.stat_str.set(display_str)
